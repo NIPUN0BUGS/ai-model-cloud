@@ -1,0 +1,28 @@
+# {$DOMAIN} = "localhost" -> Caddy issues a local self-signed cert.
+# A real domain pointing at this host -> automatic Let's Encrypt HTTPS.
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	@api path /v1/* /api/*
+	handle @api {
+		# flush_interval -1 => no buffering, required for SSE streaming
+		reverse_proxy backend:8000 {
+			flush_interval -1
+			transport http {
+				response_header_timeout 5m
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
